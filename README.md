@@ -25,12 +25,14 @@ My PhD research focuses on electric field-induced electro-optic responses in fer
 ---
 
 ## Structure
-silicon_photonics-simulations/
+
+```text
+silicon-photonics-simulations/
 ├── 001_waveguide/
 ├── 002_ring_resonator/
 ├── 003_mzm/
 └── 004_directional_coupler/
-
+```
 ---
 
 ## Contact
