@@ -4,25 +4,25 @@ import numpy as np
 
 resolution = 20
 
-# Materials
+# materials
 Si = mp.Medium(index=3.48)
 SiO2 = mp.Medium(index=1.44)
 
-# Size setting
-sx = 20
-sy = 20
+# size setting
+sx = 30
+sy = 30
 w = 0.5 # waveguide width
-r = 3.0 # ring radius
-gap = 0.2 # gap bw waveguide and ring
+r = 5.0 # ring radius
+gap = 0.1 # gap bw waveguide and ring
 
-geometry = [
-    # waveguide
-    mp.Block(
+# Geometry
+waveguide = mp.Block(
         size=mp.Vector3(mp.inf, w, mp.inf),
         center=mp.Vector3(0, -(r + w/2 + gap), 0),
         material=Si
-    ),
-    # ring (big-small circle)
+)
+
+ring = [
     mp.Cylinder(
         radius=r + w/2,
         height=mp.inf,
@@ -37,61 +37,84 @@ geometry = [
     ),
 ]
 
+sources = [ 
 
-sources = [
     mp.Source(
-        mp.GaussianSource(frequency=1/1.55, fwidth=0.3),
+        mp.GaussianSource(frequency=1/1.55, fwidth=0.15),
         component=mp.Ez,
         center=mp.Vector3(-sx/2 + 1, -(r + w/2 + gap)),
         size=mp.Vector3(0, w*2)
     )
-
 ]
 
 pml_layers = [mp.PML(1.0)]
 
-# Measurement
-# Input
-mon_pt_in = mp.Vector3(-sx/2 + 2, -(r + w/2 + gap))
-# Output
-mon_pt_out = mp.Vector3(sx/2 - 2, -(r + w/2 + gap))
-
-sim = mp.Simulation(
+# step 1: baseline (waveguide only)
+print("Step 1: Baseline simulation...")
+sim_empty = mp.Simulation(
     cell_size=mp.Vector3(sx, sy),
     boundary_layers=pml_layers,
-    geometry=geometry,
+    geometry=[waveguide],
     sources=sources,
     resolution=resolution,
     default_material=SiO2
 )
 
-# Monitor
-mon_in = sim.add_flux(
-    1/1.55, 0.3, 100,
-    mp.FluxRegion(center=mon_pt_in, size=mp.Vector3(0, w*2))
+mon_baseline = sim_empty.add_flux(
+    1/1.55, 0.15, 200,
+    mp.FluxRegion(
+        center=mp.Vector3(sx/2 -2, -(r + w/2 + gap)),
+        size=mp.Vector3(0, w*2)
+    )
 )
+
+sim_empty.run(until=1500)
+baseline = mp.get_fluxes(mon_baseline)
+
+# step 2: ring resonator
+print("step 2: ring resonator simulation...")
+sim = mp.Simulation(
+    cell_size=mp.Vector3(sx, sy),
+    boundary_layers=pml_layers,
+    geometry=[waveguide] + ring,
+    sources=sources,
+    resolution=resolution,
+    default_material=SiO2
+)
+
 mon_out = sim.add_flux(
-    1/1.55, 0.3, 100,
-    mp.FluxRegion(center=mon_pt_out, size=mp.Vector3(0, w*2))
+    1/1.55, 0.15, 200,
+    mp.FluxRegion(
+        center=mp.Vector3(sx/2 -2, -(r + w/2 + gap)),
+        size=mp.Vector3(0, w*2)
+    )
 )
 
-sim.run(until=500)
+sim.run(until=1500)
 
-# Spectrum data
-freqs = mp.get_flux_freqs(mon_in)
-flux_in = mp.get_fluxes(mon_in)
+# Ez field
+ez_data = sim.get_array(
+    center=mp.Vector3(),
+    size=mp.Vector3(sx, sy),
+    component=mp.Ez
+)
+
+# Results
+freqs = mp.get_flux_freqs(mon_out)
 flux_out = mp.get_fluxes(mon_out)
-
 wavelengths = [1/f for f in freqs]
-transmission = [abs(o/i) for o, i in zip(flux_out, flux_in)]
+transmission = [o/b for o, b in zip(flux_out, baseline)]
 
-plt.figure(figsize=(10, 5))
-plt.plot(wavelengths, transmission, 'b-', linewidth=1.5)
-plt.xlabel('Wavelength (μm)')
-plt.ylabel('Transmission')
-plt.title('Ring Resonator - Transmission Spectrum')
-plt.grid(True, alpha=0.3)
+# Ez field graph
+plt.figure(figsize=(8, 8))
+plt.imshow(ez_data.T, interpolation='bilinear',
+           cmap='seismic', origin='lower',
+           extent=[-sx/2, sx/2, -sy/2, sy/2])
+plt.colorbar(label='Ez field')
+plt.title('Ring Resonator - Ez field')
+plt.xlabel('x (μm)')
+plt.ylabel('y (μm)')
 plt.tight_layout()
-plt.savefig('transmission.png', dpi=150)
+plt.savefig('ring_ez.png', dpi=150)
 plt.show()
 print("Completed!")
