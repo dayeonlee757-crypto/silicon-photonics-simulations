@@ -59,7 +59,7 @@ def run_mzm(delta_n):
         1/1.55, 0.01, 1,
         mp.FluxRegion(
             center=mp.Vector3(sx/2 - 2, 0),
-            size=mp.Vector3(0, w*2)
+            size=mp.Vector3(0, w*2 + gap)
         )
     )
 
