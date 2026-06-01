@@ -121,10 +121,11 @@ ez_data = sim.get_array(
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
 ax1.imshow(ez_data.T, interpolation='bilinear',
-           cmap='seismic', origin='lower')
+           cmap='seismic', origin='lower',
+           extent=[-sx/2, sx/2, -sy/2, sy/2])
 ax1.set_title('Directional coupler - Ez field')
-ax1.set_xlabel('x')
-ax2.set_ylabel('y')
+ax1.set_xlabel('x (μm)')
+ax1.set_ylabel('y (μm)')
 
 ax2.plot(wavelength, ratio_top, 'b-', label='Top (through)', linewidth=1.5)
 ax2.plot(wavelength, ratio_bot, 'r-', label='Bottom (coupled)', linewidth=1.5)
